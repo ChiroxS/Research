@@ -1,0 +1,206 @@
+\documentclass{romjist}
+\usepackage{times}
+\usepackage{authblk}
+\usepackage{graphicx} 
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{cite}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\usepackage{amssymb}
+\usepackage{chemfig}
+\usepackage{centernot} 
+\begin{document}
+      
+    % Article top matter (title, authors)
+    \title{High Level Synthesis from C++/OpenCL/Python/etc. to FPGA}
+
+    \author[1]{Ionut Alexandru Cuta}%set name of first author and superscript of affiliation mark
+    \affil[1]{Politehnica University of Bucharest, Bucharest, Romania}%affiliation for superscript mark
+    \affil[ ]{Email: alexandru.cuta@yahoo.com}%optionally, set email underneath affiliation, leave mark blank
+    
+
+ 
+    % always issue maketitle before abstract
+    \maketitle
+    
+    \begin{abstract} \quad High-level synthesis(HLS) is an automated design process that takes as input a specification or a behavioural representation of an application and transforms it into a Register Level Transfer design. This usally means going from an algorithmic description represented by an untimed function which processes all of its inputs at once and gives out the results simultaneously to a digital circuit which is fully timed.
+    \end{abstract}
+    
+    \begin{keywords} 
+    \quad behavioural model, output model, exploration, interfacing, scheduling, binding, allocation, untimed, time-constrained approach, resource count, area.
+    \end{keywords}
+
+\section{Introduction}
+
+
+
+\quad A good comparison could be done using the software domain as an example. In the beginning, computers were programmed using binary sequences called machine code, but with the development of the Assembly language followed by many high-level languages, several layers of abstractions were created. Even though the constructions compiled from these high level languages were never as optimum as the ones written in one of the low level languages, it gave designers the possiblity to rapidly explore different designs and avoid human error. \\ 
+Likewise, high level synthesis would allow hardware designers to  efficiently build and verify hardware by giving them control over the design architecture. 
+
+
+
+\quad A high level synthesis tool would execute the following tasks: 
+\begin{itemize}
+  \item Compile the specification
+  \item Allocate necessary hardware resources
+  \item Organize the operations to clock cycles
+  \item Bind the operations to functional units (adders, multipliers)
+  \item Bind the data types to storage units (registers, memories)
+  \item Generate the hardware architecture
+\end{itemize}
+
+
+
+\section{Summary}
+
+
+\subsection{Advantages} 
+
+
+
+\quad High-level synthesis has experienced a growing demand for innovative solutions, these being some of the reasons mentioned in the papers:  
+
+\begin{itemize}
+  \item More processors being used in SoCs leads to demand in better exploration of various hardware/ software boundaries as well as different area/ power/ performance trade-offs
+  \item A huge increase in sillicon capacity creates a design complexity which cannot be easily handled by human designers, thus requiring higher abstraction
+  \item The extensive use of dedicated accelerators in custom architectures are suitable for HLS
+\end{itemize}
+
+
+
+While these being good enough reasons for adopting more HLS methodologies in SoC design, we also see additional reasons particular to the FPGA design:
+
+
+
+\begin{itemize} 
+  \item High level formal verification can be adopted through an in-system simulation and design iteration can be done quickly and inexpansive
+  \item Many FPGAs provice embedded IPs such as arithmetic functions and memories, which are fit for the HLS procedure
+  \item FPGA platforms are often selected for systems where the time-to-market is critical and sometimes lower performance / greater cost is accepted; HLS tools would shorten this time without lowering the performance
+  \item Recent improvements in reconfigurable computing led to the FPGA acceleration of many high performance application like video processing and scientific computation, but the hardware description languages are unacceptable to most software developers; a HLS flow would create the bridge between the two domains
+\end{itemize}
+
+
+
+
+
+
+\subsection{Basic HLS flow} 
+\quad The first step of HLS is compilation, or turning the functional specification into a formal representation. After the code optimization, the formal model produced by compilation should exhibit data and control dependencies between operations, which is done by a data flow graph (DFG), where the nodes represent different operations and the arcs to these nodes represent the input. 
+
+
+\quad The next step is allocation, which translates into defining all the hardware resources needed to satisfy the design. Those components are selected from the RTL library, which also includes details like delay and power metrics for each unit. Buses and other connectivity components may be added later. 
+
+
+\quad To create the timing constraints, the design must be scheduled into cycles. For each operation, the variables must be read from their sources and brought as input to the functional blocks, while the result of this operation must be brought to its destination. Operations can be chained in this step (output of one operations feeds the input of another). 
+
+
+\quad Each variable that carries a value across cycles needs to be bound to a storage unit. For non-overlapping variables, they can share the same storage unit. The HLS flow estimates delays during this stage so the design can be easily optimized later. 
+After these operations are completed, all decisions made are used to generate the RTL Architecture in the form of Verilog code which can be synthesized using traditional tools. 
+
+
+
+\subsection{RTL Architecture}
+\quad A possible RTL Architecture is presented in Figure 1. It includes a controller and a data path.
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=1\linewidth]{figures/{RTL}.png}
+    \caption{Possible architecture}
+    \label{fig:figure1}
+\end{figure}
+
+
+\quad The data path consists of storage elements (registers) ,functional units( ALUs, shifters) and interconnect elements (buses, tristate buffers). In addition, some components may also be pipelined. The controller is a finite state machine that dictates the data flow using several control signals. 
+
+
+
+\subsection{Operation example}
+
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.5\linewidth]{figures/{operation1}.png}
+    \caption{SQRT}
+    \label{fig:figure2}
+\end{figure}
+
+
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.5\linewidth]{figures/{operation2}.png}
+    \caption{Schedulling}
+    \label{fig:figure3}
+\end{figure}
+
+
+
+\quad Figure 2 shows a simple sqrt algorithm, with a data and a control flow.  For the first operation, the addition must wait for the result of the multiplication. On the other hand, there is no dependency between the I+1 and the operation that computes Y. 
+
+
+\quad Since this graph is more suitable for human readability, to translate it into hardware some optimizations can be done, for example replacing the multiplication by 0.5 with a 1-bit right shift.  Another possible optimization is changing 0.22 + 0.88 * x to 0.22 * ( 1 + 4 * x) since the multiplication by 4 can be done using a 2-bit left shift. 
+
+
+\quad The next two steps in synthesis are scheduling and allocation. Figure 3 shows an nonoptimsed approach (a) and a slightly optimised one (b), but many other optimisations can be done. 
+
+
+\quad For example (a) there is only one functional unit and and one single port memory. If single registers are used for Y and I, as in example (b), and an additional register is added, I:= 0 and shift operations no longer require a control step, thus completing the computation in 2 + 4*4 = 18 steps, instead of 3 + 4*5 = 25 steps. 
+
+
+
+\subsection{Compilation Techniques}
+
+\quad The following transformations have been shown to be effective in the context of HLS:
+
+
+\begin{itemize}
+  \item Code optimizations suchs as dead-code elimination
+  \item Arithmetic simplifications ( 3*x – x = x <<1 )
+  \item Range analysis used to extract and propagate the value range information
+  \item Memory optimization; memory reuse 
+  \item Loop transformation; loop unrolling
+\end{itemize}
+
+
+
+
+
+\subsection{State-of-the-Art HLS FPGA Flow}
+
+\quad AutoPilot is one of the recent HLS tools and accepts ANSI C, C++ as input and performs advanced platform based code transformations and synthesis optimization. AutoPilot outputs RTL in Verilog or VHDL. It also creates a test bench and wrappers so that designers can verify the corectness of the RTL. In addition, AutoPilot generates synthesis reports to estimate FPGA resource utilization and latency.  
+
+
+\quad LegUp is an open source HLS that automatically compiles a C program to target a hybrid FPGA-based software/hardware system in which some parts of the program execute on a MIPS 32-bit processor while the others are synthesized directly into RTL. The reason for this is to separate segments that are more appropiate for hardware (addition of arrays) and segments that are more appropiate for software ( traversing a linked list). LegUp is written in modular C++.
+
+
+
+\section{Conclusion}
+
+\quad We have been seeing significant progress in the last generation of HLS tools an techniques, wide language coverege, robust compilation technology. As a result, they can provide competitive alternatives to traditional RTL design, especially  for the FPGA segment. 
+
+
+
+ 
+\begin{thebibliography}{24}
+\bibitem{1}	Jason Cong, Bil Niu \textit{High-level Synthesis for FPGAs: From prototyping to deployment}, IEEE Transactions on Computer-aided Design of Integrated Circuits and Systems
+\bibitem{2}	Andrew Canis, Jongsok Choi \textit{igh-level synthesis for FPGA-based processor/accelerator systems}, IPGA ’11 Proceedings of the 19th ACM/SIGDA international symposium on Field programmable gate arrays
+\bibitem{3}	Andrew Canis, Jongsok Choi \textit{An Open Source High-Level Synthesis Tool for FPGA-Based Processor/Accelerator Systems}, ACM Transactions on Embedded Computing Systems
+\bibitem{4} M.C. McFarland, A.C. Parker  \textit{The high-level synthesis of digital systems}, IProceedings of the IEEE
+\bibitem{5}	D.D Gajski, Philipe Coussy \textit{High-level Synthesis for FPGAs: From prototyping to deployment}, An Introduction to high-level synthesis – IEEE Design and Test of Computers
+
+
+
+\end{thebibliography}
+
+
+
+
+
+
+
+
+\end{document}
+
+
